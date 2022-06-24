@@ -1,0 +1,58 @@
+---
+title: "Eosinophilic oesophagitis estimate"
+author: "Impact team"
+date: "`r Sys.Date()`"
+output:
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+        code_download: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+```
+
+# Actual prescribing data
+```{r}
+actual <- read_csv("./APR22 ISC NAT MEDS (UPTO DEC21) CSV.csv",
+                   col_types = "cdcccccccdccdcdc")
+
+# Look at unique values in each column
+map(actual, unique)
+
+# Drop unnecessary columns
+population <- unique(actual$denominator)
+
+data <- actual %>% 
+    select(-c(data_type, treatment_type, treatment_name, provider_code, provider_name, numerator_unit, high_level_condition, denominator, denominator_unit, value, value_unit)) %>% 
+    rename(tablets = numerator) %>% 
+    # Drop 2016/17 Q4
+    filter(year_quarter != "2016/17 Q4") %>% 
+    # Manipulate dates
+    # Remove second year of fiscal year
+    mutate(quarter_end = str_remove(year, "_\\d{2}") %>%
+               # Set all to April (beginning of fiscal year)
+               str_c("-04") %>% 
+               # Convert to date format
+               ym(), 
+           .after = year_quarter) %>%
+    # Set date to last month of quarter
+    mutate(quarter_end = quarter_end + (months(3)*(quarter-1)) + months(3) - days(1)) %>% 
+    select(-c(year, quarter)) %>% 
+    # Assume NA means 0 prescribing
+    mutate(tablets = replace_na(tablets, 0))
+```
+
+```{r}
+data %>% 
+    ggplot(aes(x = quarter_end, y = tablets, colour = data_source)) +
+    geom_line() +
+    geom_point() +
+    geom_vline(xintercept = ymd("2021-06-23"),
+               linetype = "dashed") +
+    scale_x_date(date_labels = "%b %Y")
+```
+
