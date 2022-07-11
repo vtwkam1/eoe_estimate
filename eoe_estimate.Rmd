@@ -13,6 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(lubridate)
+library(scales)
 ```
 
 # Actual prescribing data
@@ -53,6 +54,25 @@ data %>%
     geom_point() +
     geom_vline(xintercept = ymd("2021-06-23"),
                linetype = "dashed") +
-    scale_x_date(date_labels = "%b %Y")
+    scale_x_date(date_labels = "%b %Y") +
+    scale_y_continuous(labels = label_comma(),
+                       breaks = seq(0, 60000, 10000))
 ```
+
+```{r}
+data %>% 
+    group_by(year(quarter_end)) %>% 
+    summarise(annual_tablets = sum(tablets))
+```
+```{r}
+data %>% 
+    ggplot(aes(x = quarter_end, y = tablets, fill = data_source)) +
+    geom_area() +
+    geom_vline(xintercept = ymd("2021-06-23"),
+               linetype = "dashed") +
+    scale_x_date(date_labels = "%b %Y") +
+    scale_y_continuous(labels = label_comma(),
+                       breaks = seq(0, 150000, 10000))
+```
+
 
